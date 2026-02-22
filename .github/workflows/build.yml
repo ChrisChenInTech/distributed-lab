@@ -1,29 +1,38 @@
-name: C++ gRPC Build
-on: [push]
+name: Build and Upload Artifacts
+
+on:
+  push:
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: windows-latest
+
     steps:
-      - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      - name: Setup vcpkg
-        run: |
-          git clone https://github.com/microsoft/vcpkg.git
-          .\vcpkg\bootstrap-vcpkg.bat
-          .\vcpkg\vcpkg install grpc:x64-windows protobuf:x64-windows
+    - name: Install vcpkg
+      run: |
+        git clone https://github.com/microsoft/vcpkg.git
+        .\vcpkg\bootstrap-vcpkg.bat
 
-      - name: Configure CMake
-        run: |
-          mkdir build
-          cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+    - name: Install dependencies
+      run: |
+        .\vcpkg\vcpkg.exe install grpc protobuf
 
-      - name: Build
-        run: cmake --build build --config Release
+    - name: Configure CMake
+      run: cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake
 
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: distributed-apps
-          path: |
-            build/Release/*.exe
+    - name: Build project
+      run: cmake --build build --config Release
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: executables
+        path: |
+          build/Release/mono_app.exe
+          build/Release/dist_server.exe
+          build/Release/dist_client.exe
